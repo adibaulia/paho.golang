@@ -480,16 +480,34 @@ func (mr *MetricRecorder) RecordThroughput(clientID string, bytes int64, message
 
 // Helper methods for metric recording
 func (mr *MetricRecorder) incrementCounter(key string) {
+	if mr.counters == nil {
+		mr.counters = make(map[string]int64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	mr.counters[key]++
 	mr.lastUpdate[key] = time.Now()
 }
 
 func (mr *MetricRecorder) addToCounter(key string, value int64) {
+	if mr.counters == nil {
+		mr.counters = make(map[string]int64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	mr.counters[key] += value
 	mr.lastUpdate[key] = time.Now()
 }
 
 func (mr *MetricRecorder) recordHistogram(key string, value float64) {
+	if mr.histograms == nil {
+		mr.histograms = make(map[string][]float64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	if mr.histograms[key] == nil {
 		mr.histograms[key] = make([]float64, 0)
 	}
@@ -498,11 +516,23 @@ func (mr *MetricRecorder) recordHistogram(key string, value float64) {
 }
 
 func (mr *MetricRecorder) incrementGauge(key string) {
+	if mr.gauges == nil {
+		mr.gauges = make(map[string]int64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	mr.gauges[key]++
 	mr.lastUpdate[key] = time.Now()
 }
 
 func (mr *MetricRecorder) decrementGauge(key string) {
+	if mr.gauges == nil {
+		mr.gauges = make(map[string]int64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	if mr.gauges[key] > 0 {
 		mr.gauges[key]--
 	}
@@ -510,6 +540,12 @@ func (mr *MetricRecorder) decrementGauge(key string) {
 }
 
 func (mr *MetricRecorder) setGauge(key string, value int64) {
+	if mr.gauges == nil {
+		mr.gauges = make(map[string]int64)
+	}
+	if mr.lastUpdate == nil {
+		mr.lastUpdate = make(map[string]time.Time)
+	}
 	mr.gauges[key] = value
 	mr.lastUpdate[key] = time.Now()
 }
@@ -518,15 +554,27 @@ func (mr *MetricRecorder) setGauge(key string, value int64) {
 func (mr *MetricRecorder) GetMetricsSummary() map[string]interface{} {
 	summary := make(map[string]interface{})
 	
-	summary["counters"] = mr.counters
-	summary["gauges"] = mr.gauges
+	// Safely handle nil maps
+	if mr.counters != nil {
+		summary["counters"] = mr.counters
+	} else {
+		summary["counters"] = make(map[string]int64)
+	}
+	
+	if mr.gauges != nil {
+		summary["gauges"] = mr.gauges
+	} else {
+		summary["gauges"] = make(map[string]int64)
+	}
 	
 	// Calculate histogram statistics
 	histogramStats := make(map[string]map[string]float64)
-	for key, values := range mr.histograms {
-		if len(values) > 0 {
-			stats := calculateHistogramStats(values)
-			histogramStats[key] = stats
+	if mr.histograms != nil {
+		for key, values := range mr.histograms {
+			if len(values) > 0 {
+				stats := calculateHistogramStats(values)
+				histogramStats[key] = stats
+			}
 		}
 	}
 	summary["histograms"] = histogramStats

@@ -22,7 +22,7 @@ type OTelMQTTObserver struct {
 func NewOTelMQTTObserver(clientID string) *OTelMQTTObserver {
 	return &OTelMQTTObserver{
 		clientID: clientID,
-		metricRecorder: &MetricRecorder{},
+		metricRecorder: NewMetricRecorder(),
 		spanBuilder: SpanNames,
 	}
 }
