@@ -29,6 +29,7 @@ import (
 
 	"github.com/eclipse/paho.golang/autopaho/queue"
 	"github.com/eclipse/paho.golang/autopaho/queue/memory"
+	"github.com/eclipse/paho.golang/observability"
 	"github.com/eclipse/paho.golang/packets"
 	"github.com/eclipse/paho.golang/paho/log"
 	"github.com/eclipse/paho.golang/paho/session/state"
@@ -109,7 +110,7 @@ type ClientConfig struct {
 	DisconnectPacketBuilder func() *paho.Disconnect
 
 	// We include the full paho.ClientConfig in order to simplify moving between the two packages.
-	// Note that Conn will be ignored.
+	// Note that Conn will be ignored (Observer field is available via embedded paho.ClientConfig).
 	paho.ClientConfig
 }
 
@@ -128,8 +129,9 @@ type ConnectionManager struct {
 
 	done chan struct{} // Channel that will be closed when the process has cleanly shutdown
 
-	debug  log.Logger // By default set to NOOPLogger{},set to a logger for debugging info
-	errors log.Logger // By default set to NOOPLogger{},set to a logger for errors
+	debug    log.Logger                 // By default set to NOOPLogger{},set to a logger for debugging info
+	errors   log.Logger                 // By default set to NOOPLogger{},set to a logger for errors
+	observer observability.MQTTObserver // Observer for monitoring MQTT operations
 }
 
 // ResetUsernamePassword clears any configured username and password on the client configuration
@@ -274,6 +276,10 @@ func NewConnection(ctx context.Context, cfg ClientConfig) (*ConnectionManager, e
 	if cfg.Session == nil { // Must create this, or it will be recreated upon reconnection, and we will lose the session info
 		cfg.Session = state.NewInMemory()
 	}
+	// Initialize observer if not provided
+	if cfg.ClientConfig.Observer == nil {
+		cfg.ClientConfig.Observer = &observability.NoOpObserver{}
+	}
 	innerCtx, cancel := context.WithCancel(ctx)
 	c := ConnectionManager{
 		cli:       nil,
@@ -284,6 +290,7 @@ func NewConnection(ctx context.Context, cfg ClientConfig) (*ConnectionManager, e
 		done:      make(chan struct{}),
 		errors:    cfg.Errors,
 		debug:     cfg.Debug,
+		observer:  cfg.ClientConfig.Observer,
 	}
 	errChan := make(chan error, 1) // Will be sent one, and only one error per connection (buffered to prevent deadlock)
 	firstConnection := true        // Set to false after we have successfully connected
@@ -317,6 +324,23 @@ func NewConnection(ctx context.Context, cfg ClientConfig) (*ConnectionManager, e
 			c.connDown = make(chan struct{})
 			close(c.connUp)
 			c.mu.Unlock()
+
+			// Notify observer of successful connection
+			if c.observer != nil {
+				connConfig := observability.ConnectionConfig{
+					ClientID:        cfg.ClientID,
+					BrokerURL:       cfg.ServerUrls[0].String(), // Use first server URL
+					KeepAlive:       time.Duration(cfg.KeepAlive) * time.Second,
+					CleanStart:      cfg.CleanStartOnInitialConnection,
+					ProtocolVersion: 5, // MQTT 5.0
+					TLSEnabled:      cfg.TlsCfg != nil,
+				}
+				ctx, endFunc := c.observer.OnConnect(innerCtx, connConfig)
+				if endFunc != nil {
+					endFunc(nil) // Connection successful
+				}
+				_ = ctx // Use the returned context if needed
+			}
 
 			if cfg.OnConnectionUp != nil {
 				cfg.OnConnectionUp(&c, connAck)
@@ -360,6 +384,23 @@ func NewConnection(ctx context.Context, cfg ClientConfig) (*ConnectionManager, e
 			close(c.connDown)
 			c.connUp = make(chan struct{})
 			c.mu.Unlock()
+
+			// Notify observer of disconnection
+			if c.observer != nil {
+				disconnectReason := observability.DisconnectReason{
+					Code:              0, // Will be updated based on actual reason
+					Reason:            "Connection lost",
+					InitiatedByClient: false,
+				}
+				if err != nil {
+					disconnectReason.Reason = err.Error()
+				}
+				ctx, endFunc := c.observer.OnDisconnect(innerCtx, disconnectReason)
+				if endFunc != nil {
+					endFunc(nil)
+				}
+				_ = ctx
+			}
 
 			if cfg.OnConnectionDown != nil && !cfg.OnConnectionDown() {
 				cfg.Debug.Printf("mainLoop: connection to server lost (%s); OnConnectionDown aborts reconnect\n", err)
@@ -435,7 +476,47 @@ func (c *ConnectionManager) Subscribe(ctx context.Context, s *paho.Subscribe) (*
 	if cli == nil {
 		return nil, ConnectionDownError
 	}
-	return cli.Subscribe(ctx, s)
+
+	// Notify observer of subscribe operation
+	var endFunc func(observability.SubscribeResult)
+	if c.observer != nil {
+		topics := make([]observability.SubscriptionTopic, len(s.Subscriptions))
+		for i, sub := range s.Subscriptions {
+			topics[i] = observability.SubscriptionTopic{
+				Topic: sub.Topic,
+				QoS:   sub.QoS,
+			}
+		}
+		ctx, endFunc = c.observer.OnSubscribe(ctx, topics)
+	}
+
+	start := time.Now()
+	resp, err := cli.Subscribe(ctx, s)
+	latency := time.Since(start)
+
+	// Complete observability tracking
+	if endFunc != nil {
+		topics := make([]observability.SubscriptionTopic, len(s.Subscriptions))
+		for i, sub := range s.Subscriptions {
+			topics[i] = observability.SubscriptionTopic{
+				Topic: sub.Topic,
+				QoS:   sub.QoS,
+			}
+		}
+		var results []byte
+		if resp != nil {
+			results = resp.Reasons
+		}
+		result := observability.SubscribeResult{
+			Topics:  topics,
+			Results: results,
+			Error:   err,
+			Latency: latency,
+		}
+		endFunc(result)
+	}
+
+	return resp, err
 }
 
 // Unsubscribe is used to send an Unsubscribe request to the MQTT server.
@@ -450,7 +531,28 @@ func (c *ConnectionManager) Unsubscribe(ctx context.Context, u *paho.Unsubscribe
 	if cli == nil {
 		return nil, ConnectionDownError
 	}
-	return cli.Unsubscribe(ctx, u)
+
+	// Notify observer of unsubscribe operation
+	var endFunc func(observability.UnsubscribeResult)
+	if c.observer != nil {
+		ctx, endFunc = c.observer.OnUnsubscribe(ctx, u.Topics)
+	}
+
+	start := time.Now()
+	resp, err := cli.Unsubscribe(ctx, u)
+	latency := time.Since(start)
+
+	// Complete observability tracking
+	if endFunc != nil {
+		result := observability.UnsubscribeResult{
+			Topics:  u.Topics,
+			Error:   err,
+			Latency: latency,
+		}
+		endFunc(result)
+	}
+
+	return resp, err
 }
 
 // Publish is used to send a publication to the MQTT server.
@@ -465,7 +567,35 @@ func (c *ConnectionManager) Publish(ctx context.Context, p *paho.Publish) (*paho
 	if cli == nil {
 		return nil, ConnectionDownError
 	}
-	return cli.Publish(ctx, p)
+
+	// Notify observer of publish operation
+	var endFunc func(observability.PublishResult)
+	if c.observer != nil {
+		pubMsg := observability.PublishMessage{
+			Topic:     p.Topic,
+			Payload:   p.Payload,
+			QoS:       p.QoS,
+			Retain:    p.Retain,
+			MessageID: p.PacketID,
+		}
+		ctx, endFunc = c.observer.OnPublish(ctx, pubMsg)
+	}
+
+	start := time.Now()
+	resp, err := cli.Publish(ctx, p)
+	latency := time.Since(start)
+
+	// Complete observability tracking
+	if endFunc != nil {
+		result := observability.PublishResult{
+			MessageID: p.PacketID,
+			Error:     err,
+			Latency:   latency,
+		}
+		endFunc(result)
+	}
+
+	return resp, err
 }
 
 // QueuePublish holds info required to publish a message. A separate struct is used so options can be added in the future

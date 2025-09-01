@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/eclipse/paho.golang/observability"
 	"github.com/eclipse/paho.golang/packets"
 	"github.com/eclipse/paho.golang/paho/log"
 	"github.com/eclipse/paho.golang/paho/session"
@@ -103,6 +104,8 @@ type (
 		// SendAcksInterval is used only when EnableManualAcknowledgment is true
 		// it determines how often the client tries to send a batch of acknowledgments in the right order to the server.
 		SendAcksInterval time.Duration
+		// Observer provides observability hooks for monitoring MQTT operations
+		Observer observability.MQTTObserver
 	}
 	// Client is the struct representing an MQTT client
 	Client struct {
@@ -130,6 +133,7 @@ type (
 		clientProps    CommsProperties
 		debug          log.Logger
 		errors         log.Logger
+		observer       observability.MQTTObserver
 	}
 
 	// CommsProperties is a struct of the communication properties that may
@@ -206,6 +210,13 @@ func NewClient(conf ClientConfig) *Client {
 	}
 	if c.config.OnClientError == nil {
 		c.config.OnClientError = func(e error) {}
+	}
+
+	// Initialize observer
+	if conf.Observer != nil {
+		c.observer = conf.Observer
+	} else {
+		c.observer = &observability.NoOpObserver{}
 	}
 
 	return c
@@ -352,11 +363,38 @@ func (c *Client) Connect(ctx context.Context, cp *Connect) (*Connack, error) {
 		c.serverProps.SharedSubAvailable = ca.Properties.SharedSubAvailable
 	}
 
+	// Notify observer of successful connection
+	var connEndFunc func(error)
+	if c.observer != nil {
+		connConfig := observability.ConnectionConfig{
+			ClientID:        c.config.ClientID,
+			BrokerURL:       c.config.Conn.RemoteAddr().String(),
+			KeepAlive:       time.Duration(keepalive) * time.Second,
+			CleanStart:      cp.CleanStart,
+			ProtocolVersion: int(ccp.ProtocolVersion),
+			TLSEnabled:      false, // TODO: detect TLS from connection
+		}
+		ctx, connEndFunc = c.observer.OnConnect(ctx, connConfig)
+	}
+
 	c.debug.Println("received CONNACK, starting PingHandler")
 	c.workers.Add(1)
 	go func() {
 		defer c.workers.Done()
 		defer c.debug.Println("returning from ping handler worker")
+		// Notify observer of disconnection when ping handler exits
+		defer func() {
+			if connEndFunc != nil {
+				connEndFunc(nil) // Connection ended normally
+			}
+			if c.observer != nil {
+				_, disconnEndFunc := c.observer.OnDisconnect(context.Background(), observability.DisconnectReason{
+					Reason:            "ping handler exit",
+					InitiatedByClient: false,
+				})
+				disconnEndFunc(nil)
+			}
+		}()
 		if err := c.config.PingHandler.Run(clientCtx, c.config.Conn, keepalive); err != nil {
 			go c.error(fmt.Errorf("ping handler error: %w", err))
 		}
@@ -682,6 +720,20 @@ func (c *Client) Subscribe(ctx context.Context, s *Subscribe) (*Suback, error) {
 		}
 	}
 
+	// Notify observer of subscribe operation
+	var endFunc func(observability.SubscribeResult)
+	if c.observer != nil {
+		subTopics := make([]observability.SubscriptionTopic, len(s.Subscriptions))
+		for i, sub := range s.Subscriptions {
+			subTopics[i] = observability.SubscriptionTopic{
+				Topic: sub.Topic,
+				QoS:   sub.QoS,
+			}
+		}
+		ctx, endFunc = c.observer.OnSubscribe(ctx, subTopics)
+	}
+	start := time.Now()
+
 	c.debug.Printf("subscribing to %+v", s.Subscriptions)
 
 	ret := make(chan packets.ControlPacket, 1)
@@ -721,6 +773,7 @@ func (c *Client) Subscribe(ctx context.Context, s *Subscribe) (*Suback, error) {
 	c.debug.Println("received SUBACK")
 
 	sa := SubackFromPacketSuback(sap.Content.(*packets.Suback))
+	var err error
 	switch {
 	case len(sa.Reasons) == 1:
 		if sa.Reasons[0] >= 0x80 {
@@ -729,17 +782,39 @@ func (c *Client) Subscribe(ctx context.Context, s *Subscribe) (*Suback, error) {
 			if sa.Properties != nil {
 				reason = sa.Properties.ReasonString
 			}
-			return sa, fmt.Errorf("failed to subscribe to topic: %s", reason)
+			err = fmt.Errorf("failed to subscribe to topic: %s", reason)
 		}
 	default:
 		for _, code := range sa.Reasons {
 			if code >= 0x80 {
 				c.debug.Println("received an error code in Suback:", code)
-				return sa, fmt.Errorf("at least one requested subscription failed")
+				err = fmt.Errorf("at least one requested subscription failed")
+				break
 			}
 		}
 	}
 
+	if endFunc != nil {
+		topics := make([]observability.SubscriptionTopic, len(s.Subscriptions))
+		results := make([]byte, len(sa.Reasons))
+		for i, sub := range s.Subscriptions {
+			topics[i] = observability.SubscriptionTopic{
+				Topic: sub.Topic,
+				QoS:   sub.QoS,
+			}
+		}
+		copy(results, sa.Reasons)
+		endFunc(observability.SubscribeResult{
+			Topics:  topics,
+			Results: results,
+			Error:   err,
+			Latency: time.Since(start),
+		})
+	}
+
+	if err != nil {
+		return sa, err
+	}
 	return sa, nil
 }
 
@@ -748,6 +823,13 @@ func (c *Client) Subscribe(ctx context.Context, s *Subscribe) (*Suback, error) {
 // a response Unsuback, or for the timeout to fire. Any response Unsuback
 // is returned from the function, along with any errors.
 func (c *Client) Unsubscribe(ctx context.Context, u *Unsubscribe) (*Unsuback, error) {
+	// Notify observer of unsubscribe operation
+	var endFunc func(observability.UnsubscribeResult)
+	if c.observer != nil {
+		ctx, endFunc = c.observer.OnUnsubscribe(ctx, u.Topics)
+	}
+	start := time.Now()
+
 	c.debug.Printf("unsubscribing from %+v", u.Topics)
 	ret := make(chan packets.ControlPacket, 1)
 	up := u.Packet()
@@ -786,6 +868,7 @@ func (c *Client) Unsubscribe(ctx context.Context, u *Unsubscribe) (*Unsuback, er
 	c.debug.Println("received SUBACK")
 
 	ua := UnsubackFromPacketUnsuback(uap.Content.(*packets.Unsuback))
+	var err error
 	switch {
 	case len(ua.Reasons) == 1:
 		if ua.Reasons[0] >= 0x80 {
@@ -794,17 +877,29 @@ func (c *Client) Unsubscribe(ctx context.Context, u *Unsubscribe) (*Unsuback, er
 			if ua.Properties != nil {
 				reason = ua.Properties.ReasonString
 			}
-			return ua, fmt.Errorf("failed to unsubscribe from topic: %s", reason)
+			err = fmt.Errorf("failed to unsubscribe from topic: %s", reason)
 		}
 	default:
 		for _, code := range ua.Reasons {
 			if code >= 0x80 {
 				c.debug.Println("received an error code in Suback:", code)
-				return ua, fmt.Errorf("at least one requested unsubscribe failed")
+				err = fmt.Errorf("at least one requested unsubscribe failed")
+				break
 			}
 		}
 	}
 
+	if endFunc != nil {
+		endFunc(observability.UnsubscribeResult{
+			Topics:  u.Topics,
+			Error:   err,
+			Latency: time.Since(start),
+		})
+	}
+
+	if err != nil {
+		return ua, err
+	}
 	return ua, nil
 }
 
@@ -853,6 +948,19 @@ func (c *Client) PublishWithOptions(ctx context.Context, p *Publish, o PublishOp
 		return nil, fmt.Errorf("%w: cannot send a publish with no TopicAlias and no Topic set", ErrInvalidArguments)
 	}
 
+	// Notify observer of publish operation
+	var endFunc func(observability.PublishResult)
+	if c.observer != nil {
+		pubMsg := observability.PublishMessage{
+			Topic:     p.Topic,
+			Payload:   p.Payload,
+			QoS:       p.QoS,
+			Retain:    p.Retain,
+			MessageID: p.PacketID,
+		}
+		ctx, endFunc = c.observer.OnPublish(ctx, pubMsg)
+	}
+
 	if c.config.PublishHook != nil {
 		c.config.PublishHook(p)
 	}
@@ -861,19 +969,49 @@ func (c *Client) PublishWithOptions(ctx context.Context, p *Publish, o PublishOp
 
 	pb := p.Packet()
 
+	start := time.Now()
 	switch p.QoS {
 	case 0:
 		c.debug.Println("sending QoS0 message")
 		if _, err := pb.WriteTo(c.config.Conn); err != nil {
 			go c.error(err)
+			if endFunc != nil {
+				endFunc(observability.PublishResult{
+					MessageID: p.PacketID,
+					Error:     err,
+					Latency:   time.Since(start),
+				})
+			}
 			return nil, err
 		}
 		c.config.PingHandler.PacketSent()
+		if endFunc != nil {
+			endFunc(observability.PublishResult{
+				MessageID: p.PacketID,
+				Error:     nil,
+				Latency:   time.Since(start),
+			})
+		}
 		return &PublishResponse{}, nil
 	case 1, 2:
-		return c.publishQoS12(ctx, pb, o)
+		resp, err := c.publishQoS12(ctx, pb, o)
+		if endFunc != nil {
+			endFunc(observability.PublishResult{
+				MessageID: p.PacketID,
+				Error:     err,
+				Latency:   time.Since(start),
+			})
+		}
+		return resp, err
 	}
 
+	if endFunc != nil {
+		endFunc(observability.PublishResult{
+			MessageID: p.PacketID,
+			Error:     fmt.Errorf("%w: QoS isn't 0, 1 or 2", ErrInvalidArguments),
+			Latency:   time.Since(start),
+		})
+	}
 	return nil, fmt.Errorf("%w: QoS isn't 0, 1 or 2", ErrInvalidArguments)
 }
 
