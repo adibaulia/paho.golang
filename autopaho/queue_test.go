@@ -28,14 +28,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eclipse/paho.golang/autopaho/queue"
-	memqueue "github.com/eclipse/paho.golang/autopaho/queue/memory"
-	"github.com/eclipse/paho.golang/internal/testserver"
-	"github.com/eclipse/paho.golang/packets"
-	"github.com/eclipse/paho.golang/paho"
-	paholog "github.com/eclipse/paho.golang/paho/log"
-	"github.com/eclipse/paho.golang/paho/session/state"
-	memstore "github.com/eclipse/paho.golang/paho/store/memory"
+	"github.com/adibaulia/paho.golang/autopaho/queue"
+	memqueue "github.com/adibaulia/paho.golang/autopaho/queue/memory"
+	"github.com/adibaulia/paho.golang/internal/testserver"
+	"github.com/adibaulia/paho.golang/packets"
+	"github.com/adibaulia/paho.golang/paho"
+	paholog "github.com/adibaulia/paho.golang/paho/log"
+	"github.com/adibaulia/paho.golang/paho/session/state"
+	memstore "github.com/adibaulia/paho.golang/paho/store/memory"
 )
 
 //

@@ -15,7 +15,7 @@
 
 package paho
 
-import "github.com/eclipse/paho.golang/packets"
+import "github.com/adibaulia/paho.golang/packets"
 
 type (
 	// Disconnect is a representation of the MQTT Disconnect packet

@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/eclipse/paho.golang/packets"
+	"github.com/adibaulia/paho.golang/packets"
 )
 
 type (

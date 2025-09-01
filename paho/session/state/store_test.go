@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eclipse/paho.golang/internal/testserver"
-	"github.com/eclipse/paho.golang/packets"
-	paholog "github.com/eclipse/paho.golang/paho/log"
-	"github.com/eclipse/paho.golang/paho/store/memory"
+	"github.com/adibaulia/paho.golang/internal/testserver"
+	"github.com/adibaulia/paho.golang/packets"
+	paholog "github.com/adibaulia/paho.golang/paho/log"
+	"github.com/adibaulia/paho.golang/paho/store/memory"
 )
 
 // TestLoadExistingSession confirms that a session loaded from disk updates the state as expected

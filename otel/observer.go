@@ -4,7 +4,7 @@
 package otel
 
 import (
-	"github.com/eclipse/paho.golang/observability"
+	"github.com/adibaulia/paho.golang/observability"
 )
 
 // Re-export core types from observability package for convenience

@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eclipse/paho.golang/otel"
-	"github.com/eclipse/paho.golang/paho"
+	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/paho"
 )
 
 // This example demonstrates how to use the paho client with OpenTelemetry observability.

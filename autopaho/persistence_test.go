@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eclipse/paho.golang/internal/testserver"
-	"github.com/eclipse/paho.golang/packets"
-	"github.com/eclipse/paho.golang/paho"
-	paholog "github.com/eclipse/paho.golang/paho/log"
-	"github.com/eclipse/paho.golang/paho/session/state"
+	"github.com/adibaulia/paho.golang/internal/testserver"
+	"github.com/adibaulia/paho.golang/packets"
+	"github.com/adibaulia/paho.golang/paho"
+	paholog "github.com/adibaulia/paho.golang/paho/log"
+	"github.com/adibaulia/paho.golang/paho/session/state"
 )
 
 //

@@ -29,8 +29,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eclipse/paho.golang/paho"
-	"github.com/eclipse/paho.golang/paho/extensions/rpc"
+	"github.com/adibaulia/paho.golang/paho"
+	"github.com/adibaulia/paho.golang/paho/extensions/rpc"
 )
 
 func init() {

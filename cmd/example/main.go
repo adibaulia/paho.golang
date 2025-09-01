@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/eclipse/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/otel"
 )
 
 func main() {

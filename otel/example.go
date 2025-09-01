@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/eclipse/paho.golang/observability"
+	"github.com/adibaulia/paho.golang/observability"
 )
 
 // SimpleMQTTClient demonstrates how to integrate observability with MQTT operations

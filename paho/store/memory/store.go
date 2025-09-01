@@ -22,7 +22,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/eclipse/paho.golang/packets"
+	"github.com/adibaulia/paho.golang/packets"
 )
 
 var (

@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/eclipse/paho.golang/autopaho"
-	"github.com/eclipse/paho.golang/otel"
-	"github.com/eclipse/paho.golang/paho"
+	"github.com/adibaulia/paho.golang/autopaho"
+	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/paho"
 )
 
 // This example demonstrates how to use the autopaho client with OpenTelemetry observability.

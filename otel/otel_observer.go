@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/eclipse/paho.golang/observability"
+	"github.com/adibaulia/paho.golang/observability"
 )
 
 // OTelMQTTObserver implements observability.MQTTObserver using OpenTelemetry

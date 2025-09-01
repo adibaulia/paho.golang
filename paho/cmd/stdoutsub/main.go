@@ -25,7 +25,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/eclipse/paho.golang/paho"
+	"github.com/adibaulia/paho.golang/paho"
 )
 
 func main() {
