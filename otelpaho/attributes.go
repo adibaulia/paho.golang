@@ -1,6 +1,6 @@
-// Package otel provides detailed attribute and metric definitions for MQTT observability
+// Package otelpaho provides detailed attribute and metric definitions for MQTT observability
 // following OpenTelemetry semantic conventions for messaging systems.
-package otel
+package otelpaho
 
 import (
 	"fmt"

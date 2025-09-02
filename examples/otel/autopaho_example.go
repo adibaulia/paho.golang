@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/adibaulia/paho.golang/autopaho"
-	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/otelpaho"
 	"github.com/adibaulia/paho.golang/paho"
 )
 
@@ -34,7 +34,7 @@ func exampleMain() {
 	}
 
 	// Create OpenTelemetry observer
-	observer := otel.NewOTelMQTTObserver("autopaho-otel-example")
+	observer := otelpaho.NewOTelMQTTObserver("autopaho-otel-example")
 
 	// Configure autopaho client with observability
 	cfg := autopaho.ClientConfig{
@@ -126,4 +126,8 @@ func exampleMain() {
 	}
 
 	fmt.Println("Disconnected successfully")
+}
+
+func main() {
+	exampleMain()
 }

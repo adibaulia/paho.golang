@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/otelpaho"
 )
 
 func main() {
-	otel.RunExample()
+	otelpaho.RunExample()
 }

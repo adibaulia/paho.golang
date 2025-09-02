@@ -1,6 +1,6 @@
 // Package otel provides metric definitions for MQTT observability
 // following OpenTelemetry semantic conventions for messaging systems.
-package otel
+package otelpaho
 
 import (
 	"fmt"
@@ -13,75 +13,75 @@ import (
 
 const (
 	// Connection Metrics
-	MQTTConnectionsActiveMetric     = "mqtt.connections.active"     // Gauge: Number of active MQTT connections
-	MQTTConnectionAttemptsMetric    = "mqtt.connection.attempts"    // Counter: Total connection attempts
-	MQTTConnectionSuccessMetric     = "mqtt.connection.success"     // Counter: Successful connections
-	MQTTConnectionFailuresMetric    = "mqtt.connection.failures"    // Counter: Failed connections
-	MQTTConnectionDurationMetric    = "mqtt.connection.duration"    // Histogram: Connection duration
-	MQTTConnectionLatencyMetric     = "mqtt.connection.latency"     // Histogram: Time to establish connection
-	MQTTReconnectionAttemptsMetric  = "mqtt.reconnection.attempts"  // Counter: Reconnection attempts
-	
+	MQTTConnectionsActiveMetric    = "mqtt.connections.active"    // Gauge: Number of active MQTT connections
+	MQTTConnectionAttemptsMetric   = "mqtt.connection.attempts"   // Counter: Total connection attempts
+	MQTTConnectionSuccessMetric    = "mqtt.connection.success"    // Counter: Successful connections
+	MQTTConnectionFailuresMetric   = "mqtt.connection.failures"   // Counter: Failed connections
+	MQTTConnectionDurationMetric   = "mqtt.connection.duration"   // Histogram: Connection duration
+	MQTTConnectionLatencyMetric    = "mqtt.connection.latency"    // Histogram: Time to establish connection
+	MQTTReconnectionAttemptsMetric = "mqtt.reconnection.attempts" // Counter: Reconnection attempts
+
 	// Message Publishing Metrics
-	MQTTMessagesPublishedMetric     = "mqtt.messages.published"     // Counter: Total messages published
+	MQTTMessagesPublishedMetric     = "mqtt.messages.published"      // Counter: Total messages published
 	MQTTMessagesPublishFailedMetric = "mqtt.messages.publish_failed" // Counter: Failed publish attempts
-	MQTTPublishLatencyMetric        = "mqtt.publish.latency"        // Histogram: Time to publish message
-	MQTTPublishSizeMetric           = "mqtt.publish.size"           // Histogram: Size of published messages
-	MQTTPublishQueueSizeMetric      = "mqtt.publish.queue_size"     // Gauge: Number of messages in publish queue
-	
+	MQTTPublishLatencyMetric        = "mqtt.publish.latency"         // Histogram: Time to publish message
+	MQTTPublishSizeMetric           = "mqtt.publish.size"            // Histogram: Size of published messages
+	MQTTPublishQueueSizeMetric      = "mqtt.publish.queue_size"      // Gauge: Number of messages in publish queue
+
 	// Message Receiving Metrics
-	MQTTMessagesReceivedMetric      = "mqtt.messages.received"      // Counter: Total messages received
+	MQTTMessagesReceivedMetric      = "mqtt.messages.received"       // Counter: Total messages received
 	MQTTMessageReceiveLatencyMetric = "mqtt.message.receive_latency" // Histogram: Message receive latency
-	MQTTMessageSizeMetric           = "mqtt.message.size"           // Histogram: Size of received messages
+	MQTTMessageSizeMetric           = "mqtt.message.size"            // Histogram: Size of received messages
 	MQTTMessageProcessingTimeMetric = "mqtt.message.processing_time" // Histogram: Time to process received message
-	
+
 	// Subscription Metrics
-	MQTTSubscriptionsActiveMetric   = "mqtt.subscriptions.active"   // Gauge: Number of active subscriptions
-	MQTTSubscribeAttemptsMetric     = "mqtt.subscribe.attempts"     // Counter: Subscribe attempts
-	MQTTSubscribeSuccessMetric      = "mqtt.subscribe.success"      // Counter: Successful subscriptions
-	MQTTSubscribeFailuresMetric     = "mqtt.subscribe.failures"     // Counter: Failed subscriptions
-	MQTTUnsubscribeAttemptsMetric   = "mqtt.unsubscribe.attempts"   // Counter: Unsubscribe attempts
-	MQTTUnsubscribeSuccessMetric    = "mqtt.unsubscribe.success"    // Counter: Successful unsubscriptions
-	
+	MQTTSubscriptionsActiveMetric = "mqtt.subscriptions.active" // Gauge: Number of active subscriptions
+	MQTTSubscribeAttemptsMetric   = "mqtt.subscribe.attempts"   // Counter: Subscribe attempts
+	MQTTSubscribeSuccessMetric    = "mqtt.subscribe.success"    // Counter: Successful subscriptions
+	MQTTSubscribeFailuresMetric   = "mqtt.subscribe.failures"   // Counter: Failed subscriptions
+	MQTTUnsubscribeAttemptsMetric = "mqtt.unsubscribe.attempts" // Counter: Unsubscribe attempts
+	MQTTUnsubscribeSuccessMetric  = "mqtt.unsubscribe.success"  // Counter: Successful unsubscriptions
+
 	// Protocol Metrics
-	MQTTPingRequestsMetric          = "mqtt.ping.requests"          // Counter: PING requests sent
-	MQTTPingResponsesMetric         = "mqtt.ping.responses"         // Counter: PING responses received
-	MQTTPingLatencyMetric           = "mqtt.ping.latency"           // Histogram: PING round-trip time
-	MQTTPacketsSentMetric           = "mqtt.packets.sent"           // Counter: Total packets sent
-	MQTTPacketsReceivedMetric       = "mqtt.packets.received"       // Counter: Total packets received
-	MQTTPacketSizeMetric            = "mqtt.packet.size"            // Histogram: Packet sizes
-	
+	MQTTPingRequestsMetric    = "mqtt.ping.requests"    // Counter: PING requests sent
+	MQTTPingResponsesMetric   = "mqtt.ping.responses"   // Counter: PING responses received
+	MQTTPingLatencyMetric     = "mqtt.ping.latency"     // Histogram: PING round-trip time
+	MQTTPacketsSentMetric     = "mqtt.packets.sent"     // Counter: Total packets sent
+	MQTTPacketsReceivedMetric = "mqtt.packets.received" // Counter: Total packets received
+	MQTTPacketSizeMetric      = "mqtt.packet.size"      // Histogram: Packet sizes
+
 	// Error Metrics
-	MQTTErrorsMetric                = "mqtt.errors"                 // Counter: Total errors by type
-	MQTTProtocolErrorsMetric        = "mqtt.protocol.errors"        // Counter: Protocol-level errors
-	MQTTNetworkErrorsMetric         = "mqtt.network.errors"         // Counter: Network-level errors
-	MQTTTimeoutsMetric              = "mqtt.timeouts"               // Counter: Operation timeouts
-	
+	MQTTErrorsMetric         = "mqtt.errors"          // Counter: Total errors by type
+	MQTTProtocolErrorsMetric = "mqtt.protocol.errors" // Counter: Protocol-level errors
+	MQTTNetworkErrorsMetric  = "mqtt.network.errors"  // Counter: Network-level errors
+	MQTTTimeoutsMetric       = "mqtt.timeouts"        // Counter: Operation timeouts
+
 	// QoS Metrics
-	MQTTQoS0MessagesMetric          = "mqtt.qos0.messages"          // Counter: QoS 0 messages
-	MQTTQoS1MessagesMetric          = "mqtt.qos1.messages"          // Counter: QoS 1 messages
-	MQTTQoS2MessagesMetric          = "mqtt.qos2.messages"          // Counter: QoS 2 messages
-	MQTTQoS1AckLatencyMetric        = "mqtt.qos1.ack_latency"       // Histogram: QoS 1 acknowledgment latency
-	MQTTQoS2FlowLatencyMetric       = "mqtt.qos2.flow_latency"      // Histogram: QoS 2 flow completion latency
-	
+	MQTTQoS0MessagesMetric    = "mqtt.qos0.messages"     // Counter: QoS 0 messages
+	MQTTQoS1MessagesMetric    = "mqtt.qos1.messages"     // Counter: QoS 1 messages
+	MQTTQoS2MessagesMetric    = "mqtt.qos2.messages"     // Counter: QoS 2 messages
+	MQTTQoS1AckLatencyMetric  = "mqtt.qos1.ack_latency"  // Histogram: QoS 1 acknowledgment latency
+	MQTTQoS2FlowLatencyMetric = "mqtt.qos2.flow_latency" // Histogram: QoS 2 flow completion latency
+
 	// Session Metrics
-	MQTTSessionsActiveMetric        = "mqtt.sessions.active"        // Gauge: Active sessions
-	MQTTSessionDurationMetric       = "mqtt.session.duration"       // Histogram: Session duration
-	MQTTSessionMessagesMetric       = "mqtt.session.messages"       // Counter: Messages per session
-	
+	MQTTSessionsActiveMetric  = "mqtt.sessions.active"  // Gauge: Active sessions
+	MQTTSessionDurationMetric = "mqtt.session.duration" // Histogram: Session duration
+	MQTTSessionMessagesMetric = "mqtt.session.messages" // Counter: Messages per session
+
 	// Throughput Metrics
-	MQTTThroughputBytesMetric       = "mqtt.throughput.bytes"       // Counter: Total bytes transferred
-	MQTTThroughputMessagesMetric    = "mqtt.throughput.messages"    // Counter: Total messages transferred
+	MQTTThroughputBytesMetric    = "mqtt.throughput.bytes"    // Counter: Total bytes transferred
+	MQTTThroughputMessagesMetric = "mqtt.throughput.messages" // Counter: Total messages transferred
 )
 
 // Metric Units following OpenTelemetry conventions
 const (
-	UnitBytes        = "By"    // Bytes
-	UnitMilliseconds = "ms"    // Milliseconds
-	UnitSeconds      = "s"     // Seconds
-	UnitCount        = "1"     // Dimensionless count
-	UnitConnections  = "{connection}" // Connection count
-	UnitMessages     = "{message}"    // Message count
-	UnitPackets      = "{packet}"     // Packet count
+	UnitBytes         = "By"             // Bytes
+	UnitMilliseconds  = "ms"             // Milliseconds
+	UnitSeconds       = "s"              // Seconds
+	UnitCount         = "1"              // Dimensionless count
+	UnitConnections   = "{connection}"   // Connection count
+	UnitMessages      = "{message}"      // Message count
+	UnitPackets       = "{packet}"       // Packet count
 	UnitSubscriptions = "{subscription}" // Subscription count
 )
 
@@ -141,7 +141,7 @@ var MQTTMetrics = map[string]MetricDefinition{
 		Type:        MetricTypeHistogram,
 		Attributes:  []string{MQTTClientIDKey, MQTTBrokerURLKey, NetworkTransportKey},
 	},
-	
+
 	// Publishing Metrics
 	MQTTMessagesPublishedMetric: {
 		Name:        MQTTMessagesPublishedMetric,
@@ -171,7 +171,7 @@ var MQTTMetrics = map[string]MetricDefinition{
 		Type:        MetricTypeHistogram,
 		Attributes:  []string{MQTTClientIDKey, MessagingDestinationNameKey, MQTTQoSKey},
 	},
-	
+
 	// Receiving Metrics
 	MQTTMessagesReceivedMetric: {
 		Name:        MQTTMessagesReceivedMetric,
@@ -187,7 +187,7 @@ var MQTTMetrics = map[string]MetricDefinition{
 		Type:        MetricTypeHistogram,
 		Attributes:  []string{MQTTClientIDKey, MessagingDestinationNameKey, MQTTQoSKey},
 	},
-	
+
 	// Subscription Metrics
 	MQTTSubscriptionsActiveMetric: {
 		Name:        MQTTSubscriptionsActiveMetric,
@@ -203,7 +203,7 @@ var MQTTMetrics = map[string]MetricDefinition{
 		Type:        MetricTypeCounter,
 		Attributes:  []string{MQTTClientIDKey, MessagingDestinationNameKey, MQTTQoSKey},
 	},
-	
+
 	// Protocol Metrics
 	MQTTPingRequestsMetric: {
 		Name:        MQTTPingRequestsMetric,
@@ -219,7 +219,7 @@ var MQTTMetrics = map[string]MetricDefinition{
 		Type:        MetricTypeHistogram,
 		Attributes:  []string{MQTTClientIDKey, MQTTBrokerURLKey},
 	},
-	
+
 	// Error Metrics
 	MQTTErrorsMetric: {
 		Name:        MQTTErrorsMetric,
@@ -277,49 +277,49 @@ func (mr *MetricRecorder) CategorizeError(err error) ErrorCategory {
 	if err == nil {
 		return ErrorCategoryUnknown
 	}
-	
+
 	errorMsg := err.Error()
-	
+
 	// Network-related errors
 	if contains(errorMsg, []string{"connection refused", "network unreachable", "no route to host", "connection reset"}) {
 		return ErrorCategoryNetwork
 	}
-	
+
 	// Timeout errors
 	if contains(errorMsg, []string{"timeout", "deadline exceeded", "context deadline"}) {
 		return ErrorCategoryTimeout
 	}
-	
+
 	// Authentication errors
 	if contains(errorMsg, []string{"authentication", "unauthorized", "bad username", "bad password"}) {
 		return ErrorCategoryAuth
 	}
-	
+
 	// Permission errors
 	if contains(errorMsg, []string{"permission", "forbidden", "not authorized", "access denied"}) {
 		return ErrorCategoryPermission
 	}
-	
+
 	// Protocol errors
 	if contains(errorMsg, []string{"protocol", "malformed", "invalid packet", "reason code"}) {
 		return ErrorCategoryProtocol
 	}
-	
+
 	// QoS errors
 	if contains(errorMsg, []string{"qos", "quality of service", "delivery"}) {
 		return ErrorCategoryQoS
 	}
-	
+
 	// Payload errors
 	if contains(errorMsg, []string{"payload", "message size", "too large", "encoding"}) {
 		return ErrorCategoryPayload
 	}
-	
+
 	// Connection errors
 	if contains(errorMsg, []string{"connection", "connect", "disconnect", "broker"}) {
 		return ErrorCategoryConnection
 	}
-	
+
 	return ErrorCategoryUnknown
 }
 
@@ -346,11 +346,11 @@ func (mr *MetricRecorder) RecordConnectionSuccess(clientID, brokerURL, transport
 	successKey := fmt.Sprintf("%s.%s.%s", MQTTConnectionSuccessMetric, clientID, transport)
 	latencyKey := fmt.Sprintf("%s.%s.%s", MQTTConnectionLatencyMetric, clientID, transport)
 	activeKey := fmt.Sprintf("%s.%s", MQTTConnectionsActiveMetric, clientID)
-	
+
 	mr.incrementCounter(successKey)
 	mr.recordHistogram(latencyKey, float64(latency.Milliseconds()))
 	mr.incrementGauge(activeKey)
-	
+
 	fmt.Printf("[METRICS] Connection success: client=%s, broker=%s, latency=%v\n", clientID, brokerURL, latency)
 }
 
@@ -359,11 +359,11 @@ func (mr *MetricRecorder) RecordConnectionFailure(clientID, brokerURL, transport
 	errorCategory := mr.CategorizeError(err)
 	key := fmt.Sprintf("%s.%s.%s.%s", MQTTConnectionFailuresMetric, clientID, transport, errorCategory)
 	mr.incrementCounter(key)
-	
+
 	// Also record in general error metrics
 	mr.RecordError(clientID, "connect", string(errorCategory))
-	
-	fmt.Printf("[METRICS] Connection failure: client=%s, broker=%s, error=%s, category=%s\n", 
+
+	fmt.Printf("[METRICS] Connection failure: client=%s, broker=%s, error=%s, category=%s\n",
 		clientID, brokerURL, err.Error(), errorCategory)
 }
 
@@ -372,12 +372,12 @@ func (mr *MetricRecorder) RecordMessagePublished(clientID, topic string, qos int
 	publishedKey := fmt.Sprintf("%s.%s.qos%d", MQTTMessagesPublishedMetric, clientID, qos)
 	latencyKey := fmt.Sprintf("%s.%s.qos%d", MQTTPublishLatencyMetric, clientID, qos)
 	sizeKey := fmt.Sprintf("%s.%s.qos%d", MQTTPublishSizeMetric, clientID, qos)
-	
+
 	mr.incrementCounter(publishedKey)
 	mr.recordHistogram(latencyKey, float64(latency.Milliseconds()))
 	mr.recordHistogram(sizeKey, float64(size))
-	
-	fmt.Printf("[METRICS] Message published: client=%s, topic=%s, qos=%d, size=%d, latency=%v\n", 
+
+	fmt.Printf("[METRICS] Message published: client=%s, topic=%s, qos=%d, size=%d, latency=%v\n",
 		clientID, topic, qos, size, latency)
 }
 
@@ -386,11 +386,11 @@ func (mr *MetricRecorder) RecordMessagePublishFailure(clientID, topic string, qo
 	errorCategory := mr.CategorizeError(err)
 	key := fmt.Sprintf("%s.%s.qos%d.%s", MQTTMessagesPublishFailedMetric, clientID, qos, errorCategory)
 	mr.incrementCounter(key)
-	
+
 	// Also record in general error metrics
 	mr.RecordError(clientID, "publish", string(errorCategory))
-	
-	fmt.Printf("[METRICS] Publish failure: client=%s, topic=%s, qos=%d, error=%s, category=%s\n", 
+
+	fmt.Printf("[METRICS] Publish failure: client=%s, topic=%s, qos=%d, error=%s, category=%s\n",
 		clientID, topic, qos, err.Error(), errorCategory)
 }
 
@@ -398,11 +398,11 @@ func (mr *MetricRecorder) RecordMessagePublishFailure(clientID, topic string, qo
 func (mr *MetricRecorder) RecordMessageReceived(clientID, topic string, qos int, size int) {
 	receivedKey := fmt.Sprintf("%s.%s.qos%d", MQTTMessagesReceivedMetric, clientID, qos)
 	sizeKey := fmt.Sprintf("%s.%s.qos%d", MQTTMessageSizeMetric, clientID, qos)
-	
+
 	mr.incrementCounter(receivedKey)
 	mr.recordHistogram(sizeKey, float64(size))
-	
-	fmt.Printf("[METRICS] Message received: client=%s, topic=%s, qos=%d, size=%d\n", 
+
+	fmt.Printf("[METRICS] Message received: client=%s, topic=%s, qos=%d, size=%d\n",
 		clientID, topic, qos, size)
 }
 
@@ -410,7 +410,7 @@ func (mr *MetricRecorder) RecordMessageReceived(clientID, topic string, qos int,
 func (mr *MetricRecorder) RecordSubscription(clientID, topic string, qos int, success bool) {
 	attemptsKey := fmt.Sprintf("%s.%s.qos%d", MQTTSubscribeAttemptsMetric, clientID, qos)
 	mr.incrementCounter(attemptsKey)
-	
+
 	if success {
 		successKey := fmt.Sprintf("%s.%s.qos%d", MQTTSubscribeSuccessMetric, clientID, qos)
 		activeKey := fmt.Sprintf("%s.%s", MQTTSubscriptionsActiveMetric, clientID)
@@ -428,7 +428,7 @@ func (mr *MetricRecorder) RecordSubscription(clientID, topic string, qos int, su
 func (mr *MetricRecorder) RecordUnsubscription(clientID, topic string, success bool) {
 	attemptsKey := fmt.Sprintf("%s.%s", MQTTUnsubscribeAttemptsMetric, clientID)
 	mr.incrementCounter(attemptsKey)
-	
+
 	if success {
 		successKey := fmt.Sprintf("%s.%s", MQTTUnsubscribeSuccessMetric, clientID)
 		activeKey := fmt.Sprintf("%s.%s", MQTTSubscriptionsActiveMetric, clientID)
@@ -444,7 +444,7 @@ func (mr *MetricRecorder) RecordUnsubscription(clientID, topic string, success b
 func (mr *MetricRecorder) RecordError(clientID, operation, errorType string) {
 	generalKey := fmt.Sprintf("%s.%s.%s.%s", MQTTErrorsMetric, clientID, operation, errorType)
 	mr.incrementCounter(generalKey)
-	
+
 	fmt.Printf("[METRICS] Error recorded: client=%s, operation=%s, type=%s\n", clientID, operation, errorType)
 }
 
@@ -452,10 +452,10 @@ func (mr *MetricRecorder) RecordError(clientID, operation, errorType string) {
 func (mr *MetricRecorder) RecordPing(clientID, brokerURL string, latency time.Duration) {
 	requestKey := fmt.Sprintf("%s.%s", MQTTPingRequestsMetric, clientID)
 	latencyKey := fmt.Sprintf("%s.%s", MQTTPingLatencyMetric, clientID)
-	
+
 	mr.incrementCounter(requestKey)
 	mr.recordHistogram(latencyKey, float64(latency.Milliseconds()))
-	
+
 	fmt.Printf("[METRICS] Ping recorded: client=%s, broker=%s, latency=%v\n", clientID, brokerURL, latency)
 }
 
@@ -463,7 +463,7 @@ func (mr *MetricRecorder) RecordPing(clientID, brokerURL string, latency time.Du
 func (mr *MetricRecorder) RecordQueueSize(clientID string, size int) {
 	key := fmt.Sprintf("%s.%s", MQTTPublishQueueSizeMetric, clientID)
 	mr.setGauge(key, int64(size))
-	
+
 	fmt.Printf("[METRICS] Queue size: client=%s, size=%d\n", clientID, size)
 }
 
@@ -471,10 +471,10 @@ func (mr *MetricRecorder) RecordQueueSize(clientID string, size int) {
 func (mr *MetricRecorder) RecordThroughput(clientID string, bytes int64, messages int64) {
 	bytesKey := fmt.Sprintf("%s.%s", MQTTThroughputBytesMetric, clientID)
 	messagesKey := fmt.Sprintf("%s.%s", MQTTThroughputMessagesMetric, clientID)
-	
+
 	mr.addToCounter(bytesKey, bytes)
 	mr.addToCounter(messagesKey, messages)
-	
+
 	fmt.Printf("[METRICS] Throughput: client=%s, bytes=%d, messages=%d\n", clientID, bytes, messages)
 }
 
@@ -553,20 +553,20 @@ func (mr *MetricRecorder) setGauge(key string, value int64) {
 // GetMetricsSummary returns a summary of all recorded metrics
 func (mr *MetricRecorder) GetMetricsSummary() map[string]interface{} {
 	summary := make(map[string]interface{})
-	
+
 	// Safely handle nil maps
 	if mr.counters != nil {
 		summary["counters"] = mr.counters
 	} else {
 		summary["counters"] = make(map[string]int64)
 	}
-	
+
 	if mr.gauges != nil {
 		summary["gauges"] = mr.gauges
 	} else {
 		summary["gauges"] = make(map[string]int64)
 	}
-	
+
 	// Calculate histogram statistics
 	histogramStats := make(map[string]map[string]float64)
 	if mr.histograms != nil {
@@ -578,7 +578,7 @@ func (mr *MetricRecorder) GetMetricsSummary() map[string]interface{} {
 		}
 	}
 	summary["histograms"] = histogramStats
-	
+
 	return summary
 }
 
@@ -587,9 +587,9 @@ func calculateHistogramStats(values []float64) map[string]float64 {
 	if len(values) == 0 {
 		return map[string]float64{}
 	}
-	
+
 	stats := make(map[string]float64)
-	
+
 	// Calculate sum and count
 	var sum float64
 	for _, v := range values {
@@ -598,7 +598,7 @@ func calculateHistogramStats(values []float64) map[string]float64 {
 	stats["count"] = float64(len(values))
 	stats["sum"] = sum
 	stats["avg"] = sum / float64(len(values))
-	
+
 	// Find min and max
 	min, max := values[0], values[0]
 	for _, v := range values {
@@ -611,17 +611,17 @@ func calculateHistogramStats(values []float64) map[string]float64 {
 	}
 	stats["min"] = min
 	stats["max"] = max
-	
+
 	return stats
 }
 
 // HistogramBuckets defines standard histogram buckets for different metric types
 var HistogramBuckets = struct {
-	Latency []float64 // Latency buckets in milliseconds
-	Size    []float64 // Size buckets in bytes
+	Latency  []float64 // Latency buckets in milliseconds
+	Size     []float64 // Size buckets in bytes
 	Duration []float64 // Duration buckets in seconds
 }{
-	Latency: []float64{0.1, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000},
-	Size:    []float64{64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216},
+	Latency:  []float64{0.1, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000},
+	Size:     []float64{64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216},
 	Duration: []float64{0.1, 0.5, 1, 5, 10, 30, 60, 300, 600, 1800, 3600},
 }

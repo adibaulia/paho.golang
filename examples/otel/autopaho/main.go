@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/adibaulia/paho.golang/autopaho"
-	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/otelpaho"
 	"github.com/adibaulia/paho.golang/paho"
 )
 
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	// Create OpenTelemetry observer
-	observer := otel.NewOTelMQTTObserver("autopaho-otel-example")
+	observer := otelpaho.NewOTelMQTTObserver("autopaho-otel-example")
 
 	// Create connection up channel
 	connUpChan := make(chan struct{})
@@ -109,7 +109,7 @@ func main() {
 			case <-ticker.C:
 				counter++
 				message := fmt.Sprintf("Hello from autopaho with observability! Message #%d", counter)
-				
+
 				pubCtx, pubCancel := context.WithTimeout(context.Background(), 5*time.Second)
 				_, err := cm.Publish(pubCtx, &paho.Publish{
 					Topic:   "test/topic",
@@ -117,7 +117,7 @@ func main() {
 					QoS:     1,
 				})
 				pubCancel()
-				
+
 				if err != nil {
 					log.Printf("Failed to publish: %v", err)
 				} else {
