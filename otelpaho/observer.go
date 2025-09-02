@@ -60,10 +60,10 @@ func (sa SpanAttributes) ToMap() map[string]interface{} {
 		attrs["messaging.system"] = sa.MessagingSystem
 	}
 	if sa.MessagingOperation != "" {
-		attrs["messaging.operation.name"] = sa.MessagingOperation
+		attrs[MessagingOperationNameKey] = sa.MessagingOperation
 	}
 	if sa.MessagingDestination != "" {
-		attrs["messaging.destination.name"] = sa.MessagingDestination
+		attrs[MessagingDestinationNameKey] = sa.MessagingDestination
 	}
 	if sa.MessagingProtocol != "" {
 		attrs["messaging.protocol"] = sa.MessagingProtocol
@@ -77,7 +77,7 @@ func (sa SpanAttributes) ToMap() map[string]interface{} {
 		attrs["mqtt.client_id"] = sa.MQTTClientID
 	}
 	if sa.MQTTBrokerURL != "" {
-		attrs["mqtt.broker.url"] = sa.MQTTBrokerURL
+		attrs[MQTTBrokerURLKey] = sa.MQTTBrokerURL
 	}
 	if sa.MQTTQoS >= 0 {
 		attrs["mqtt.qos"] = sa.MQTTQoS

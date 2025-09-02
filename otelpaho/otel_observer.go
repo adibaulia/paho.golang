@@ -35,14 +35,13 @@ func NewOTelMQTTObserver(clientID string) *OTelMQTTObserver {
 
 // OnConnect is called when a connection is established
 func (o *OTelMQTTObserver) OnConnect(ctx context.Context, config observability.ConnectionConfig) (context.Context, func(error)) {
-	// Start span for connection
-	spanName := o.spanBuilder.ForOperation(OperationConnect)
+	// Start span for connection using semantic convention naming
+	spanName := MessagingClientOperationSpan
 	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
 
-	// Build attributes using the attribute builder
-	attrs := ConnectAttributes(config)
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	// Build attributes using semantic conventions
+	attrs := ConnectAttributes(config.ClientID, config.BrokerURL, int(config.KeepAlive.Seconds()), config.CleanStart)
+	span.SetAttributes(attrs...)
 
 	// Record connection attempt metric
 	if o.metricRecorder != nil {
@@ -54,16 +53,26 @@ func (o *OTelMQTTObserver) OnConnect(ctx context.Context, config observability.C
 	}
 
 	// Store connection start time for latency calculation
-	ctx = context.WithValue(ctx, "mqtt.connect.start", time.Now())
+	start := time.Now()
+	ctx = context.WithValue(ctx, MQTTConnectStartKey, start)
 
 	fmt.Printf("MQTT Connect: %s to %s\n", config.ClientID, config.BrokerURL)
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	// Return completion callback
 	return ctx, func(err error) {
+		defer span.End()
 		if err != nil {
 			o.RecordError(ctx, OperationConnect, err)
+			span.RecordError(err)
 		} else {
+			// Record successful connection duration
+			if startTime, ok := ctx.Value(MQTTConnectStartKey).(time.Time); ok {
+				duration := time.Since(startTime)
+				if o.metricRecorder != nil {
+					o.metricRecorder.RecordConnectionSuccess(o.clientID, config.BrokerURL, TransportTCP, duration)
+				}
+			}
 			fmt.Printf("MQTT Connect Complete\n")
 		}
 	}
@@ -71,21 +80,22 @@ func (o *OTelMQTTObserver) OnConnect(ctx context.Context, config observability.C
 
 // OnDisconnect is called when a connection is terminated
 func (o *OTelMQTTObserver) OnDisconnect(ctx context.Context, reason observability.DisconnectReason) (context.Context, func(error)) {
-	// Start span for disconnect
-	spanName := o.spanBuilder.ForOperation(OperationDisconnect)
+	// Start span for disconnect using semantic convention naming
+	spanName := MessagingClientOperationSpan
 	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
 
-	// Build attributes
+	// Build attributes using semantic conventions
 	attrs := DisconnectAttributes(reason)
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	span.SetAttributes(attrs...)
 
 	fmt.Printf("MQTT Disconnect: reason=%s, code=%d\n", reason.Reason, reason.Code)
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	return ctx, func(err error) {
+		defer span.End()
 		if err != nil {
 			o.RecordError(ctx, OperationDisconnect, err)
+			span.RecordError(err)
 		} else {
 			fmt.Printf("MQTT Disconnect Complete\n")
 		}
@@ -95,19 +105,11 @@ func (o *OTelMQTTObserver) OnDisconnect(ctx context.Context, reason observabilit
 // OnReconnect is called when a reconnection occurs
 func (o *OTelMQTTObserver) OnReconnect(ctx context.Context, attempt int, backoff time.Duration) (context.Context, func(error)) {
 	// Start span for reconnect
-	spanName := o.spanBuilder.ForOperation(OperationReconnect)
-	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 
 	// Build attributes
-	attrs := NewAttributeBuilder().
-		WithMessagingSystem().
-		WithOperation(OperationReconnect).
-		WithClientID(o.clientID).
-		Build()
-	attrs["mqtt.reconnect.attempt"] = attempt
-	attrs["mqtt.reconnect.backoff"] = backoff.String()
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	attrs := ReconnectAttributes(attempt, backoff)
+	span.SetAttributes(attrs...)
 
 	// Record reconnection attempt
 	o.metricRecorder.RecordError(o.clientID, OperationReconnect, "reconnection_needed")
@@ -116,6 +118,7 @@ func (o *OTelMQTTObserver) OnReconnect(ctx context.Context, attempt int, backoff
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	return ctx, func(err error) {
+		defer span.End()
 		if err != nil {
 			o.RecordError(ctx, OperationReconnect, err)
 		} else {
@@ -127,23 +130,22 @@ func (o *OTelMQTTObserver) OnReconnect(ctx context.Context, attempt int, backoff
 // OnPublish is called when a message is published
 func (o *OTelMQTTObserver) OnPublish(ctx context.Context, msg observability.PublishMessage) (context.Context, func(observability.PublishResult)) {
 	// Start span for publish
-	spanName := o.spanBuilder.ForPublish(msg.Topic)
-	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 
 	// Build attributes using the attribute builder
 	attrs := PublishAttributes(msg)
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	span.SetAttributes(attrs...)
 
 	// Record publish metrics
 	start := time.Now()
-	ctx = context.WithValue(ctx, "mqtt.publish.start", start)
+	ctx = context.WithValue(ctx, MQTTPublishStartKey, start)
 
 	fmt.Printf("MQTT Publish: topic=%s, qos=%d, size=%d bytes\n",
 		msg.Topic, msg.QoS, len(msg.Payload))
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	return ctx, func(result observability.PublishResult) {
+		defer span.End()
 		if result.Error != nil {
 			o.RecordError(ctx, OperationPublish, result.Error)
 		} else {
@@ -155,7 +157,7 @@ func (o *OTelMQTTObserver) OnPublish(ctx context.Context, msg observability.Publ
 // OnPublishComplete is called when a publish operation completes
 func (o *OTelMQTTObserver) OnPublishComplete(ctx context.Context, msg observability.PublishMessage, err error) {
 	// Calculate latency if start time is available
-	if startTime, ok := ctx.Value("mqtt.publish.start").(time.Time); ok {
+	if startTime, ok := ctx.Value(MQTTPublishStartKey).(time.Time); ok {
 		latency := time.Since(startTime)
 
 		if o.metricRecorder != nil {
@@ -183,18 +185,11 @@ func (o *OTelMQTTObserver) OnPublishComplete(ctx context.Context, msg observabil
 // OnSubscribe is called when subscribing to topics
 func (o *OTelMQTTObserver) OnSubscribe(ctx context.Context, topics []observability.SubscriptionTopic) (context.Context, func(observability.SubscribeResult)) {
 	// Start span for subscribe
-	var spanName string
-	if len(topics) > 0 {
-		spanName = o.spanBuilder.ForSubscribe(topics[0].Topic)
-	} else {
-		spanName = o.spanBuilder.ForOperation(OperationSubscribe)
-	}
-	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 
 	// Build attributes
 	attrs := SubscribeAttributes(topics)
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	span.SetAttributes(attrs...)
 
 	// Record subscription attempts
 	for _, topic := range topics {
@@ -204,6 +199,7 @@ func (o *OTelMQTTObserver) OnSubscribe(ctx context.Context, topics []observabili
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	return ctx, func(result observability.SubscribeResult) {
+		defer span.End()
 		if result.Error != nil {
 			o.RecordError(ctx, OperationSubscribe, result.Error)
 		} else {
@@ -215,26 +211,11 @@ func (o *OTelMQTTObserver) OnSubscribe(ctx context.Context, topics []observabili
 // OnUnsubscribe is called when unsubscribing from topics
 func (o *OTelMQTTObserver) OnUnsubscribe(ctx context.Context, topics []string) (context.Context, func(observability.UnsubscribeResult)) {
 	// Start span for unsubscribe
-	var spanName string
-	if len(topics) > 0 {
-		spanName = fmt.Sprintf("mqtt.unsubscribe %s", topics[0])
-	} else {
-		spanName = o.spanBuilder.ForOperation(OperationUnsubscribe)
-	}
-	ctx, span := o.tracer.Start(ctx, spanName)
-	defer span.End()
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 
 	// Build attributes
-	attrs := NewAttributeBuilder().
-		WithMessagingSystem().
-		WithOperation(OperationUnsubscribe).
-		WithClientID(o.clientID).
-		Build()
-
-	if len(topics) > 0 {
-		attrs[MessagingDestinationNameKey] = topics[0]
-	}
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	attrs := UnsubscribeAttributes(topics)
+	span.SetAttributes(attrs...)
 
 	for _, topic := range topics {
 		fmt.Printf("MQTT Unsubscribe: topic=%s\n", topic)
@@ -242,6 +223,7 @@ func (o *OTelMQTTObserver) OnUnsubscribe(ctx context.Context, topics []string) (
 	fmt.Printf("Attributes: %+v\n", attrs)
 
 	return ctx, func(result observability.UnsubscribeResult) {
+		defer span.End()
 		if result.Error != nil {
 			o.RecordError(ctx, OperationUnsubscribe, result.Error)
 		} else {
@@ -253,13 +235,12 @@ func (o *OTelMQTTObserver) OnUnsubscribe(ctx context.Context, topics []string) (
 // OnMessageReceived is called when a message is received
 func (o *OTelMQTTObserver) OnMessageReceived(ctx context.Context, msg observability.ReceivedMessage) (context.Context, func(error)) {
 	// Start span for message receive
-	spanName := o.spanBuilder.ForReceive(msg.Topic)
-	ctx, span := o.tracer.Start(ctx, spanName)
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 	defer span.End()
 
 	// Build attributes
 	attrs := ReceiveAttributes(msg)
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	span.SetAttributes(attrs...)
 
 	// Record message received metrics
 	o.metricRecorder.RecordMessageReceived(
@@ -285,20 +266,15 @@ func (o *OTelMQTTObserver) OnMessageReceived(ctx context.Context, msg observabil
 // OnPing is called when a ping is sent
 func (o *OTelMQTTObserver) OnPing(ctx context.Context) (context.Context, func(error)) {
 	// Start span for ping
-	spanName := o.spanBuilder.ForOperation(OperationPing)
-	ctx, span := o.tracer.Start(ctx, spanName)
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
 	defer span.End()
 
 	// Build attributes
-	attrs := NewAttributeBuilder().
-		WithMessagingSystem().
-		WithOperation(OperationPing).
-		WithClientID(o.clientID).
-		Build()
-	span.SetAttributes(convertToOTelAttributes(attrs)...)
+	attrs := PingAttributes(o.clientID)
+	span.SetAttributes(attrs...)
 
 	// Store ping start time for latency calculation
-	ctx = context.WithValue(ctx, "mqtt.ping.start", time.Now())
+	ctx = context.WithValue(ctx, MQTTPingStartKey, time.Now())
 
 	fmt.Printf("MQTT Ping sent\n")
 	fmt.Printf("Attributes: %+v\n", attrs)
@@ -315,7 +291,7 @@ func (o *OTelMQTTObserver) OnPing(ctx context.Context) (context.Context, func(er
 // OnPingResponse is called when a ping response is received
 func (o *OTelMQTTObserver) OnPingResponse(ctx context.Context) {
 	// Calculate ping latency if start time is available
-	if startTime, ok := ctx.Value("mqtt.ping.start").(time.Time); ok {
+	if startTime, ok := ctx.Value(MQTTPingStartKey).(time.Time); ok {
 		latency := time.Since(startTime)
 
 		// Record ping metrics
@@ -328,18 +304,12 @@ func (o *OTelMQTTObserver) OnPingResponse(ctx context.Context) {
 // OnAuth is called during authentication
 func (o *OTelMQTTObserver) OnAuth(ctx context.Context, authData observability.AuthData) (context.Context, func(observability.AuthResult)) {
 	// Start span for auth
-	spanName := o.spanBuilder.ForOperation(OperationAuth)
-	// ctx, span := o.tracer.Start(ctx, spanName)
-	// defer span.End()
-	_ = spanName // Placeholder until OpenTelemetry is integrated
+	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	defer span.End()
 
 	// Build attributes
-	attrs := NewAttributeBuilder().
-		WithMessagingSystem().
-		WithOperation(OperationAuth).
-		WithClientID(o.clientID).
-		Build()
-	attrs["mqtt.auth.method"] = authData.Method
+	attrs := AuthAttributes(o.clientID, authData.Method)
+	span.SetAttributes(attrs...)
 
 	fmt.Printf("MQTT Auth: method=%s\n", authData.Method)
 	fmt.Printf("Attributes: %+v\n", attrs)
