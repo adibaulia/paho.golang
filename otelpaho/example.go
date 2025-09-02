@@ -1,7 +1,7 @@
 // Package otel provides an example of how to integrate MQTT observability
 // This is a simplified example that demonstrates the observability interface
 // without external MQTT library dependencies.
-package otel
+package otelpaho
 
 import (
 	"context"
@@ -15,16 +15,16 @@ import (
 // SimpleMQTTClient demonstrates how to integrate observability with MQTT operations
 // This is a mock implementation for demonstration purposes
 type SimpleMQTTClient struct {
-	observer observability.MQTTObserver
-	clientID string
+	observer  observability.MQTTObserver
+	clientID  string
 	connected bool
 }
 
 // NewSimpleMQTTClient creates a new MQTT client with observability
 func NewSimpleMQTTClient(clientID string, observer observability.MQTTObserver) *SimpleMQTTClient {
 	return &SimpleMQTTClient{
-		observer: observer,
-		clientID: clientID,
+		observer:  observer,
+		clientID:  clientID,
 		connected: false,
 	}
 }
@@ -33,12 +33,12 @@ func NewSimpleMQTTClient(clientID string, observer observability.MQTTObserver) *
 func (c *SimpleMQTTClient) Connect(ctx context.Context, brokerURL string, keepAlive time.Duration) error {
 	// Create connection configuration
 	config := observability.ConnectionConfig{
-		ClientID:     c.clientID,
-		BrokerURL:    brokerURL,
-		KeepAlive:    keepAlive,
-		CleanStart:   true,
+		ClientID:        c.clientID,
+		BrokerURL:       brokerURL,
+		KeepAlive:       keepAlive,
+		CleanStart:      true,
 		ProtocolVersion: 4, // MQTT 3.1.1
-		TLSEnabled:   false,
+		TLSEnabled:      false,
 	}
 
 	// Start observability for connection

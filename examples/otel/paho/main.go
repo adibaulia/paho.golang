@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/adibaulia/paho.golang/otel"
+	"github.com/adibaulia/paho.golang/otelpaho"
 	"github.com/adibaulia/paho.golang/paho"
 )
 
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	// Create OpenTelemetry observer
-	observer := otel.NewOTelMQTTObserver("paho-otel-example")
+	observer := otelpaho.NewOTelMQTTObserver("paho-otel-example")
 
 	// Create TCP connection
 	conn, err := net.Dial("tcp", u.Host)
@@ -105,7 +105,7 @@ func main() {
 			case <-ticker.C:
 				counter++
 				message := fmt.Sprintf("Hello from paho with observability! Message #%d", counter)
-				
+
 				pubCtx, pubCancel := context.WithTimeout(context.Background(), 5*time.Second)
 				_, err := client.Publish(pubCtx, &paho.Publish{
 					Topic:   "test/topic",
@@ -113,7 +113,7 @@ func main() {
 					QoS:     1,
 				})
 				pubCancel()
-				
+
 				if err != nil {
 					log.Printf("Failed to publish: %v", err)
 				} else {

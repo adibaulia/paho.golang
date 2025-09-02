@@ -1,7 +1,7 @@
 // Package otel provides OpenTelemetry-specific implementations and utilities
 // for MQTT observability. This package implements the observability interfaces
 // using OpenTelemetry semantic conventions.
-package otel
+package otelpaho
 
 import (
 	"github.com/adibaulia/paho.golang/observability"
