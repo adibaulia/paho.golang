@@ -8,7 +8,7 @@ import (
 
 	"github.com/adibaulia/paho.golang/observability"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // MQTT Semantic Conventions
@@ -38,37 +38,33 @@ const (
 // MQTT Metadata
 const (
 	ProtocolTypeMQTT = "mqtt"
-	
+
 	// Messaging Attribute Keys
-	MessagingMQTTQoSKey           = "messaging.mqtt.qos"
-	MQTTMessageRetainKey          = "mqtt.message.retain"
-	MessagingMessageIDKey         = "messaging.message.id"
-	MessagingMessageBodySizeKey   = "messaging.message.body.size"
-	MQTTMessageDuplicateKey       = "mqtt.message.duplicate"
+	MessagingMQTTQoSKey                = "messaging.mqtt.qos"
+	MQTTMessageRetainKey               = "mqtt.message.retain"
+	MessagingMessageIDKey              = "messaging.message.id"
+	MessagingMessageBodySizeKey        = "messaging.message.body.size"
+	MQTTMessageDuplicateKey            = "mqtt.message.duplicate"
 	MQTTDisconnectInitiatedByClientKey = "mqtt.disconnect.initiated_by_client"
-	MQTTReconnectAttemptKey       = "mqtt.reconnect.attempt"
-	MQTTReconnectBackoffKey       = "mqtt.reconnect.backoff"
-	MQTTAuthMethodKey             = "mqtt.auth.method"
-	
-	// Observer Attribute Keys
-	MessagingOperationNameKey     = "messaging.operation.name"
-	MessagingDestinationNameKey   = "messaging.destination.name"
-	
+	MQTTReconnectAttemptKey            = "mqtt.reconnect.attempt"
+	MQTTReconnectBackoffKey            = "mqtt.reconnect.backoff"
+	MQTTAuthMethodKey                  = "mqtt.auth.method"
+
 	// Span Names
-	MQTTClientConnectSpan         = "MQTT Client Connect"
-	MQTTClientDisconnectSpan      = "MQTT Client Disconnect"
-	MQTTClientReconnectSpan       = "MQTT Client Reconnect"
-	MQTTClientPublishSpan         = "MQTT Client Publish"
-	MQTTClientSubscribeSpan       = "MQTT Client Subscribe"
-	MQTTClientUnsubscribeSpan     = "MQTT Client Unsubscribe"
-	MQTTClientReceiveSpan         = "MQTT Client Receive"
-	MQTTClientPingSpan            = "MQTT Client Ping"
-	MQTTClientAuthSpan            = "MQTT Client Auth"
-	
+	MQTTClientConnectSpan     = "MQTT Client Connect"
+	MQTTClientDisconnectSpan  = "MQTT Client Disconnect"
+	MQTTClientReconnectSpan   = "MQTT Client Reconnect"
+	MQTTClientPublishSpan     = "MQTT Client Publish"
+	MQTTClientSubscribeSpan   = "MQTT Client Subscribe"
+	MQTTClientUnsubscribeSpan = "MQTT Client Unsubscribe"
+	MQTTClientReceiveSpan     = "MQTT Client Receive"
+	MQTTClientPingSpan        = "MQTT Client Ping"
+	MQTTClientAuthSpan        = "MQTT Client Auth"
+
 	// Context Keys
-	MQTTConnectStartKey          = "mqtt.connect.start"
-	MQTTPublishStartKey          = "mqtt.publish.start"
-	MQTTPingStartKey             = "mqtt.ping.start"
+	MQTTConnectStartKey = "mqtt.connect.start"
+	MQTTPublishStartKey = "mqtt.publish.start"
+	MQTTPingStartKey    = "mqtt.ping.start"
 )
 
 // MQTT Operation Names
@@ -131,7 +127,7 @@ func (ab *AttributeBuilder) WithOperation(operation string) *AttributeBuilder {
 
 // WithDestination sets the messaging destination (topic)
 func (ab *AttributeBuilder) WithDestination(topic string) *AttributeBuilder {
-	ab.attributes[string(semconv.MessagingDestinationNameKey)] = topic
+	ab.attributes[string(semconv.MessagingDestinationNameKey)] = ProtocolTypeMQTT
 	return ab
 }
 
@@ -280,7 +276,7 @@ func PublishAttributes(msg observability.PublishMessage) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		semconv.MessagingSystemKey.String(ProtocolTypeMQTT),
 		semconv.MessagingOperationNameKey.String(OperationPublish),
-		semconv.MessagingDestinationNameKey.String(msg.Topic),
+		semconv.MessagingDestinationNameKey.String(ProtocolTypeMQTT),
 		semconv.NetworkProtocolNameKey.String(ProtocolTypeMQTT),
 		attribute.Int(MessagingMQTTQoSKey, int(msg.QoS)),
 		attribute.Bool(MQTTMessageRetainKey, msg.Retain),
@@ -300,7 +296,7 @@ func SubscribeAttributes(topics []observability.SubscriptionTopic) []attribute.K
 	// For multiple topics, use the first one as the primary destination
 	if len(topics) > 0 {
 		attrs = append(attrs,
-			semconv.MessagingDestinationNameKey.String(topics[0].Topic),
+			semconv.MessagingDestinationNameKey.String(ProtocolTypeMQTT),
 			attribute.Int(MessagingMQTTQoSKey, int(topics[0].QoS)),
 		)
 	}
@@ -319,7 +315,7 @@ func UnsubscribeAttributes(topics []string) []attribute.KeyValue {
 	// For multiple topics, use the first one as the primary destination
 	if len(topics) > 0 {
 		attrs = append(attrs,
-			semconv.MessagingDestinationNameKey.String(topics[0]),
+			semconv.MessagingDestinationNameKey.String(ProtocolTypeMQTT),
 		)
 	}
 
@@ -331,7 +327,7 @@ func ReceiveAttributes(msg observability.ReceivedMessage) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
 		semconv.MessagingSystemKey.String(ProtocolTypeMQTT),
 		semconv.MessagingOperationNameKey.String(OperationReceive),
-		semconv.MessagingDestinationNameKey.String(msg.Topic),
+		semconv.MessagingDestinationNameKey.String(ProtocolTypeMQTT),
 		semconv.NetworkProtocolNameKey.String(ProtocolTypeMQTT),
 		attribute.Int(MessagingMQTTQoSKey, int(msg.QoS)),
 		attribute.Bool(MQTTMessageRetainKey, msg.Retain),
