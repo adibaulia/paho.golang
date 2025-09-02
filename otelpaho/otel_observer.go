@@ -36,7 +36,7 @@ func NewOTelMQTTObserver(clientID string) *OTelMQTTObserver {
 // OnConnect is called when a connection is established
 func (o *OTelMQTTObserver) OnConnect(ctx context.Context, config observability.ConnectionConfig) (context.Context, func(error)) {
 	// Start span for connection using semantic convention naming
-	spanName := MessagingClientOperationSpan
+	spanName := MQTTClientConnectSpan
 	ctx, span := o.tracer.Start(ctx, spanName)
 
 	// Build attributes using semantic conventions
@@ -81,7 +81,7 @@ func (o *OTelMQTTObserver) OnConnect(ctx context.Context, config observability.C
 // OnDisconnect is called when a connection is terminated
 func (o *OTelMQTTObserver) OnDisconnect(ctx context.Context, reason observability.DisconnectReason) (context.Context, func(error)) {
 	// Start span for disconnect using semantic convention naming
-	spanName := MessagingClientOperationSpan
+	spanName := MQTTClientDisconnectSpan
 	ctx, span := o.tracer.Start(ctx, spanName)
 
 	// Build attributes using semantic conventions
@@ -105,7 +105,7 @@ func (o *OTelMQTTObserver) OnDisconnect(ctx context.Context, reason observabilit
 // OnReconnect is called when a reconnection occurs
 func (o *OTelMQTTObserver) OnReconnect(ctx context.Context, attempt int, backoff time.Duration) (context.Context, func(error)) {
 	// Start span for reconnect
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientReconnectSpan)
 
 	// Build attributes
 	attrs := ReconnectAttributes(attempt, backoff)
@@ -130,7 +130,7 @@ func (o *OTelMQTTObserver) OnReconnect(ctx context.Context, attempt int, backoff
 // OnPublish is called when a message is published
 func (o *OTelMQTTObserver) OnPublish(ctx context.Context, msg observability.PublishMessage) (context.Context, func(observability.PublishResult)) {
 	// Start span for publish
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientPublishSpan)
 
 	// Build attributes using the attribute builder
 	attrs := PublishAttributes(msg)
@@ -185,7 +185,7 @@ func (o *OTelMQTTObserver) OnPublishComplete(ctx context.Context, msg observabil
 // OnSubscribe is called when subscribing to topics
 func (o *OTelMQTTObserver) OnSubscribe(ctx context.Context, topics []observability.SubscriptionTopic) (context.Context, func(observability.SubscribeResult)) {
 	// Start span for subscribe
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientSubscribeSpan)
 
 	// Build attributes
 	attrs := SubscribeAttributes(topics)
@@ -211,7 +211,7 @@ func (o *OTelMQTTObserver) OnSubscribe(ctx context.Context, topics []observabili
 // OnUnsubscribe is called when unsubscribing from topics
 func (o *OTelMQTTObserver) OnUnsubscribe(ctx context.Context, topics []string) (context.Context, func(observability.UnsubscribeResult)) {
 	// Start span for unsubscribe
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientUnsubscribeSpan)
 
 	// Build attributes
 	attrs := UnsubscribeAttributes(topics)
@@ -234,8 +234,8 @@ func (o *OTelMQTTObserver) OnUnsubscribe(ctx context.Context, topics []string) (
 
 // OnMessageReceived is called when a message is received
 func (o *OTelMQTTObserver) OnMessageReceived(ctx context.Context, msg observability.ReceivedMessage) (context.Context, func(error)) {
-	// Start span for message receive
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	// Start span for receive
+	ctx, span := o.tracer.Start(ctx, MQTTClientReceiveSpan)
 	defer span.End()
 
 	// Build attributes
@@ -266,7 +266,7 @@ func (o *OTelMQTTObserver) OnMessageReceived(ctx context.Context, msg observabil
 // OnPing is called when a ping is sent
 func (o *OTelMQTTObserver) OnPing(ctx context.Context) (context.Context, func(error)) {
 	// Start span for ping
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientPingSpan)
 	defer span.End()
 
 	// Build attributes
@@ -304,7 +304,7 @@ func (o *OTelMQTTObserver) OnPingResponse(ctx context.Context) {
 // OnAuth is called during authentication
 func (o *OTelMQTTObserver) OnAuth(ctx context.Context, authData observability.AuthData) (context.Context, func(observability.AuthResult)) {
 	// Start span for auth
-	ctx, span := o.tracer.Start(ctx, MessagingClientOperationSpan)
+	ctx, span := o.tracer.Start(ctx, MQTTClientAuthSpan)
 	defer span.End()
 
 	// Build attributes

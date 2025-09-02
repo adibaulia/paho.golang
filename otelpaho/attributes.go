@@ -55,7 +55,15 @@ const (
 	MessagingDestinationNameKey   = "messaging.destination.name"
 	
 	// Span Names
-	MessagingClientOperationSpan  = "messaging.client.operation"
+	MQTTClientConnectSpan         = "MQTT Client Connect"
+	MQTTClientDisconnectSpan      = "MQTT Client Disconnect"
+	MQTTClientReconnectSpan       = "MQTT Client Reconnect"
+	MQTTClientPublishSpan         = "MQTT Client Publish"
+	MQTTClientSubscribeSpan       = "MQTT Client Subscribe"
+	MQTTClientUnsubscribeSpan     = "MQTT Client Unsubscribe"
+	MQTTClientReceiveSpan         = "MQTT Client Receive"
+	MQTTClientPingSpan            = "MQTT Client Ping"
+	MQTTClientAuthSpan            = "MQTT Client Auth"
 	
 	// Context Keys
 	MQTTConnectStartKey          = "mqtt.connect.start"
